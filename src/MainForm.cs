@@ -44,6 +44,7 @@ internal sealed class MainForm : Form
         MaximizeBox = false;
         ClientSize = new Size(340, 236);
         BackColor = BgColor;
+        Icon = AppIcon.Get();
         Font = new Font("Microsoft YaHei UI", 9f);
 
         BuildUi();

@@ -46,6 +46,9 @@ internal static class Native
     [DllImport("user32.dll")]
     public static extern IntPtr GetForegroundWindow();
 
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool DestroyIcon(IntPtr hIcon);
+
     // ---- 空闲/输入 ----
     [StructLayout(LayoutKind.Sequential)]
     public struct LASTINPUTINFO

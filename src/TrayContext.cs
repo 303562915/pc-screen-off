@@ -58,7 +58,7 @@ internal sealed class TrayContext : ApplicationContext
 
         _tray = new NotifyIcon
         {
-            Icon = SystemIcons.Application,
+            Icon = AppIcon.Get(),
             Visible = true,
             Text = "关屏 · 未启用（双击打开界面）",
             ContextMenuStrip = BuildMenu()
