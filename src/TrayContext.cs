@@ -213,24 +213,37 @@ internal sealed class TrayContext : ApplicationContext
         if (_mode == Mode.Off) return;
 
         var now = Environment.TickCount64;
-        var input = Native.LastInputTick();
-        if (input != _lastInput) _lastInput = input;
 
-        // 关键：只有「这段时间完全没人碰输入」才补发灭屏。
-        // 之前是「检测到输入就补发」，鼠标一动就发一次 → 屏幕被反复点亮又灭 → 看起来在闪。
-        var curTick = unchecked((uint)Environment.TickCount);
-        var idleMs = curTick - input;                 // 同为 32 位 tick，减法自动回绕
-        var sinceOff = now - _lastOff;
-
-        var fire = idleMs >= (uint)IdleBeforeOffMs && sinceOff >= MinGapMs;
-        if (fire)
+        // ---- 静默模式：检测到输入后,等输入停了(600ms)才补灭屏 ----
+        // 这样不会「亮-灭-亮-灭」频闪;代价是手放在鼠标上时屏幕是亮的。
+        if (_mode == Mode.Normal)
         {
-            Native.ScreenOff();
-            _lastOff = Environment.TickCount64;
-            _sent++;
-            if (_sent <= 5 || _sent % 60 == 0)
+            var curTick = unchecked((uint)Environment.TickCount);
+            var input = Native.LastInputTick();
+            var idleMs = curTick - input;
+            var sinceOff = now - _lastOff;
+
+            if (idleMs >= (uint)IdleBeforeOffMs && sinceOff >= MinGapMs)
             {
-                Log($"补灭屏 第 {_sent} 次（空闲 {idleMs}ms）");
+                Native.ScreenOff();
+                _lastOff = Environment.TickCount64;
+                _sent++;
+                if (_sent <= 5 || _sent % 60 == 0)
+                    Log($"补灭屏 第 {_sent} 次（空闲 {idleMs}ms）");
+            }
+        }
+        // ---- 锁鼠标模式：物理鼠标已被吞掉,应由程序自己维持黑色 ----
+        // 这里不能按「空闲」判断:没人动 = 没有 LastInputInfo 更新 = 会误判成"有输入",
+        // 屏幕一旦被别的程序点亮就再也不会被补灭。所以按固定间隔无条件补灭。
+        else
+        {
+            if (now - _lastOff >= LockMouseMinGapMs)
+            {
+                Native.ScreenOff();
+                _lastOff = Environment.TickCount64;
+                _sent++;
+                if (_sent <= 5 || _sent % 20 == 0)
+                    Log($"锁鼠标补灭屏 第 {_sent} 次");
             }
         }
 
@@ -244,6 +257,9 @@ internal sealed class TrayContext : ApplicationContext
             }
         }
     }
+
+    /// <summary>锁鼠标模式：每隔这么久无条件补发一次灭屏。</summary>
+    private const int LockMouseMinGapMs = 800;
 
     /// <summary>停止操作多久之后才补灭屏（毫秒）。0.6 秒后补，几乎感觉不到延迟。</summary>
     private const int IdleBeforeOffMs = 600;
