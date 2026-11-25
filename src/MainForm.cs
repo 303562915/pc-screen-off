@@ -160,7 +160,7 @@ internal sealed class MainForm : Form
         _primary.TextColor = s.Running ? Color.FromArgb(36, 12, 8) : Color.FromArgb(10, 30, 26);
         _primary.Invalidate();
 
-        _meta.Text = $"Alt+1 关屏　Alt+2 锁鼠标　Alt+3 恢复";
+        _meta.Text = "Alt+1 静默　Alt+2 锁鼠标　Alt+3 恢复　Alt+0 界面";
         _meta.ForeColor = SubTextColor;
 
         _segMute.Text = _owner.MuteOnLock ? "静音 开" : "静音 关";

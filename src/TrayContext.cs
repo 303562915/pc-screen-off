@@ -214,11 +214,17 @@ internal sealed class TrayContext : ApplicationContext
 
         var now = Environment.TickCount64;
         var input = Native.LastInputTick();
-        var newInput = input != _lastInput;
-        if (newInput) _lastInput = input;
+        if (input != _lastInput) _lastInput = input;
 
+        // 关键：只有「这段时间完全没人碰输入」才补发灭屏。
+        // 之前是「检测到输入就补发」，鼠标一动就发一次 → 屏幕被反复点亮又灭 → 看起来在闪。
+        var curTick = unchecked((uint)Environment.TickCount);
+        var idleMs = curTick - input;                 // 同为 32 位 tick，减法自动回绕
         var sinceOff = now - _lastOff;
-        if (sinceOff >= 15000 || (newInput && sinceOff >= 500))
+
+        var gap = _mode == Mode.LockMouse ? LockMouseMinGapMs : MinGapMs;
+        var fire = idleMs >= (uint)IdleBeforeOffMs && sinceOff >= gap;
+        if (fire)
         {
             Native.ScreenOff();
             _lastOff = Environment.TickCount64;
@@ -235,6 +241,15 @@ internal sealed class TrayContext : ApplicationContext
             }
         }
     }
+
+    /// <summary>停止操作多久之后才补灭屏（毫秒）。</summary>
+    private const int IdleBeforeOffMs = 2000;
+
+    /// <summary>两次灭屏指令之间至少间隔多久（毫秒），防止频闪。</summary>
+    private const int MinGapMs = 6000;
+
+    /// <summary>锁鼠标模式没有输入能唤醒屏幕，补灭屏不用太勤，减少无谓广播。</summary>
+    private const int LockMouseMinGapMs = 30000;
 
     /// <summary>界面在前台时放行鼠标，否则锁鼠标模式下连按钮都点不了。</summary>
     private bool FormIsForeground()
