@@ -116,6 +116,13 @@ internal sealed class MainForm : Form
         };
         _logLink.LinkClicked += (_, _) => _owner.OpenLogFolder();
         Controls.Add(_logLink);
+
+        var tips = new ToolTip { AutoPopDelay = 12000, InitialDelay = 400, ReshowDelay = 200 };
+        tips.SetToolTip(_primary, "关屏并静音。碰鼠标或键盘屏幕会亮一下，停手 0.6 秒重新变黑（不会闪）。");
+        tips.SetToolTip(_segNormal, "静默：不拦输入。动鼠标屏幕会跟着亮，停手才黑。");
+        tips.SetToolTip(_segLock, "锁鼠标：吞掉鼠标/触摸板，动鼠标也不亮；键盘仍能点亮。要一直黑就用这个。");
+        tips.SetToolTip(_segRestore, "停止关屏、取消静音、点亮屏幕。");
+        tips.SetToolTip(_segMute, "关屏时是否同时静音（记住选择）。");
     }
 
     private PillButton MakeSeg(string text, int y, int x, int w, Action onClick)
