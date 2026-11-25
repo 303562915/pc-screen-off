@@ -3,12 +3,13 @@ using System.Windows.Forms;
 
 namespace ScreenOff;
 
-/// <summary>承载全局热键的隐藏窗口：Alt+1 静默 / Alt+2 锁鼠标 / Alt+3 恢复。</summary>
+/// <summary>承载全局热键的隐藏窗口：Alt+0 界面 / Alt+1 静默 / Alt+2 锁鼠标 / Alt+3 恢复。</summary>
 internal sealed class HotkeyWindow : NativeWindow, IDisposable
 {
-    public const int HkNormal = 1;
-    public const int HkLockMouse = 2;
-    public const int HkRestore = 3;
+    public const int HkShowUi = 1;
+    public const int HkNormal = 2;
+    public const int HkLockMouse = 3;
+    public const int HkRestore = 4;
 
     private readonly TrayContext _context;
     private bool _registered;
@@ -26,9 +27,10 @@ internal sealed class HotkeyWindow : NativeWindow, IDisposable
     {
         var mods = Native.MOD_ALT | Native.MOD_NOREPEAT;
         _registered =
-            Native.RegisterHotKey(Handle, HkNormal, mods, 0x31) &   // Alt+1
-            Native.RegisterHotKey(Handle, HkLockMouse, mods, 0x32) & // Alt+2
-            Native.RegisterHotKey(Handle, HkRestore, mods, 0x33);    // Alt+3
+            Native.RegisterHotKey(Handle, HkShowUi, mods, 0x30) &     // Alt+0
+            Native.RegisterHotKey(Handle, HkNormal, mods, 0x31) &     // Alt+1
+            Native.RegisterHotKey(Handle, HkLockMouse, mods, 0x32) &  // Alt+2
+            Native.RegisterHotKey(Handle, HkRestore, mods, 0x33);     // Alt+3
     }
 
     protected override void WndProc(ref Message m)
@@ -46,6 +48,7 @@ internal sealed class HotkeyWindow : NativeWindow, IDisposable
     {
         if (Handle != IntPtr.Zero)
         {
+            Native.UnregisterHotKey(Handle, HkShowUi);
             Native.UnregisterHotKey(Handle, HkNormal);
             Native.UnregisterHotKey(Handle, HkLockMouse);
             Native.UnregisterHotKey(Handle, HkRestore);

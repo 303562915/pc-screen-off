@@ -48,6 +48,9 @@ internal sealed class MouseBlocker : IDisposable
     public int Swallowed => _swallowed;
     public int LastError { get; private set; }
 
+    /// <summary>返回 true 时放行（例如界面窗口在前台，要能点按钮）。</summary>
+    public static Func<bool> PassThrough;
+
     public bool Install()
     {
         if (_hook != IntPtr.Zero) return true;
@@ -80,8 +83,12 @@ internal sealed class MouseBlocker : IDisposable
                 var injected = (info.flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0;
                 if (!injected)
                 {
-                    _swallowed++;
-                    return new IntPtr(1);   // 丢弃：系统看不到这次鼠标动作
+                    var pass = PassThrough;
+                    if (pass == null || !pass())
+                    {
+                        _swallowed++;
+                        return new IntPtr(1);   // 丢弃：系统看不到这次鼠标动作
+                    }
                 }
             }
         }

@@ -43,6 +43,9 @@ internal static class Native
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetForegroundWindow();
+
     // ---- 空闲/输入 ----
     [StructLayout(LayoutKind.Sequential)]
     public struct LASTINPUTINFO
