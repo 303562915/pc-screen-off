@@ -19,7 +19,7 @@ internal sealed class TrayContext : ApplicationContext
         LockMouse
     }
 
-    internal readonly struct Snapshot
+    internal readonly struct StatusSnapshot
     {
         public readonly bool Running;
         public readonly string StateText;
@@ -27,7 +27,7 @@ internal sealed class TrayContext : ApplicationContext
         public readonly bool MutedByUs;
         public readonly bool Hotkeys;
 
-        public Snapshot(bool running, string stateText, int sent, bool mutedByUs, bool hotkeys)
+        public StatusSnapshot(bool running, string stateText, int sent, bool mutedByUs, bool hotkeys)
         {
             Running = running;
             StateText = stateText;
@@ -92,7 +92,7 @@ internal sealed class TrayContext : ApplicationContext
         }
     }
 
-    public Snapshot Snapshot() => new(
+    public StatusSnapshot Snapshot() => new(
         _mode != Mode.Off,
         _mode switch
         {
