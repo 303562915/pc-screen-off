@@ -72,6 +72,7 @@ internal sealed class InputLock : IDisposable
     private static HookProc _kbProc;
     private static IntPtr _mouseHook = IntPtr.Zero;
     private static IntPtr _kbHook = IntPtr.Zero;
+    private static InputLock _owner;   // 让静态钩子回调能触发实例事件
 
     private static volatile bool _active;
     private static volatile bool _swallowKeyboard;
@@ -81,6 +82,8 @@ internal sealed class InputLock : IDisposable
 
     /// <summary>识别到 Alt+3 时触发（在钩子线程上）。</summary>
     public event Action AltThreePressed;
+
+    private void FireAltThree() => AltThreePressed?.Invoke();
 
     public bool Active => _active;
     public int SwallowedMouse => _swallowedMouse;
@@ -92,6 +95,7 @@ internal sealed class InputLock : IDisposable
     {
         if (_mouseHook != IntPtr.Zero) return true;
 
+        _owner = this;
         _swallowKeyboard = swallowKeyboard;
         _swallowedMouse = 0;
         _swallowedKey = 0;
@@ -118,6 +122,7 @@ internal sealed class InputLock : IDisposable
         _swallowKeyboard = false;
         if (_mouseHook != IntPtr.Zero) { UnhookWindowsHookEx(_mouseHook); _mouseHook = IntPtr.Zero; }
         if (_kbHook != IntPtr.Zero) { UnhookWindowsHookEx(_kbHook); _kbHook = IntPtr.Zero; }
+        _owner = null;
     }
 
     private static IntPtr MouseCallback(int nCode, IntPtr wParam, IntPtr lParam)
@@ -165,7 +170,7 @@ internal sealed class InputLock : IDisposable
                     if (isDown && info.vkCode == VK_3 && _altDown)
                     {
                         _altDown = false;
-                        AltThreePressed?.Invoke();
+                        ((InputLock)hookOwner)?.FireAltThree();
                         return CallNextHookEx(_kbHook, nCode, wParam, lParam);   // 这一组放行
                     }
 
