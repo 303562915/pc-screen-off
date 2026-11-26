@@ -39,7 +39,7 @@ internal sealed class TrayContext : ApplicationContext
 
     private readonly NotifyIcon _tray;
     private readonly Timer _timer;
-    private readonly MouseBlocker _blocker = new();
+    private readonly InputLock _inputLock = new();
     private readonly HotkeyWindow _hotkeys;
 
     private Mode _mode = Mode.Off;
@@ -67,7 +67,8 @@ internal sealed class TrayContext : ApplicationContext
 
         _hotkeys = new HotkeyWindow(this);
 
-        MouseBlocker.PassThrough = FormIsForeground;
+        // 钩子跑在别的线程，恢复到 UI 线程执行
+        _inputLock.AltThreePressed += () => BeginInvoke((Action)(() => RestoreAll("Alt+3（锁定中）")));
 
         _timer = new Timer { Interval = 100 };
         _timer.Tick += (_, _) => Tick();
@@ -97,7 +98,7 @@ internal sealed class TrayContext : ApplicationContext
         _mode switch
         {
             Mode.Normal => "静默中 · 屏幕保持关闭",
-            Mode.LockMouse => "锁鼠标中 · 屏幕保持关闭",
+            Mode.LockMouse => "全锁定中 · 屏幕关闭，只有 Alt+3 能解开",
             _ => "未启用"
         },
         _sent,
@@ -180,8 +181,8 @@ internal sealed class TrayContext : ApplicationContext
 
         _mode = mode;
 
-        _blocker.Stop();
-        if (mode == Mode.LockMouse) _blocker.Install();
+        _inputLock.Stop();
+        if (mode == Mode.LockMouse) _inputLock.Install(true);
 
         _mutedByUs = _muteOnLock && AudioMute.SetMute(true);
         _lastInput = Native.LastInputTick();
@@ -192,14 +193,14 @@ internal sealed class TrayContext : ApplicationContext
 
         Native.ScreenOff();
 
-        Log($"{ModeName(mode)} 开始（{reason}）静音={_mutedByUs} 鼠标钩子={_blocker.Active}");
+        Log($"{ModeName(mode)} 开始（{reason}）静音={_mutedByUs} 输入锁={_inputLock.Active}");
         UpdateTray();
         _form?.Invoke(new Action(() => _form?.Refresh()));
     }
 
     private void ShutdownToIdle()
     {
-        _blocker.Stop();
+        _inputLock.Stop();
         if (_mutedByUs)
         {
             AudioMute.SetMute(false);
@@ -272,20 +273,13 @@ internal sealed class TrayContext : ApplicationContext
     /// <summary>两次灭屏指令之间至少间隔多久（毫秒），防止频闪。</summary>
     private const int MinGapMs = 5000;
 
-    /// <summary>界面在前台时放行鼠标，否则锁鼠标模式下连按钮都点不了。</summary>
-    private bool FormIsForeground()
-    {
-        if (_form == null || _form.IsDisposed || !_form.Visible) return false;
-        return Native.GetForegroundWindow() == _form.Handle;
-    }
-
     private ContextMenuStrip BuildMenu()
     {
         var menu = new ContextMenuStrip();
         menu.Items.Add("打开界面（Alt+0）", null, (_, _) => ShowWindow());
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("① 静默模式（Alt+1）", null, (_, _) => Start(Mode.Normal, "托盘"));
-        menu.Items.Add("② 锁鼠标模式（Alt+2）", null, (_, _) => Start(Mode.LockMouse, "托盘"));
+        menu.Items.Add("② 全锁定模式（Alt+2，只有 Alt+3 能解）", null, (_, _) => Start(Mode.LockMouse, "托盘"));
         menu.Items.Add("③ 恢复屏幕（Alt+3）", null, (_, _) => RestoreAll("托盘"));
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("退出", null, (_, _) => ExitAll());
@@ -297,7 +291,7 @@ internal sealed class TrayContext : ApplicationContext
         var state = _mode switch
         {
             Mode.Normal => "静默中",
-            Mode.LockMouse => "锁鼠标中",
+            Mode.LockMouse => "全锁定中（Alt+3 解除）",
             _ => "未启用"
         };
 
@@ -408,7 +402,7 @@ internal sealed class TrayContext : ApplicationContext
             _disposed = true;
             try { _timer?.Stop(); } catch { }
             try { _hotkeys?.Dispose(); } catch { }
-            try { _blocker?.Dispose(); } catch { }
+            try { _inputLock?.Dispose(); } catch { }
             try { AudioMute.SetMute(false); } catch { }
             try { Native.ScreenOn(); } catch { }
             try { if (_form != null && !_form.IsDisposed) _form.Dispose(); } catch { }

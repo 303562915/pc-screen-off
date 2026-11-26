@@ -100,7 +100,7 @@ internal sealed class MainForm : Form
         var gap = 5;
 
         _segNormal = MakeSeg("关屏", y, 20, w, () => _owner.StartNormal("界面"));
-        _segLock = MakeSeg("锁鼠标", y, 20 + (w + gap), w, () => _owner.StartLockMouse("界面"));
+        _segLock = MakeSeg("全锁定", y, 20 + (w + gap), w, () => _owner.StartLockMouse("界面"));
         _segRestore = MakeSeg("恢复", y, 20 + (w + gap) * 2, w, () => _owner.RestoreAll("界面"));
         _segMute = MakeSeg("静音", y, 20 + (w + gap) * 3, w, ToggleMute);
 
@@ -120,7 +120,7 @@ internal sealed class MainForm : Form
         var tips = new ToolTip { AutoPopDelay = 12000, InitialDelay = 400, ReshowDelay = 200 };
         tips.SetToolTip(_primary, "关屏并静音。碰鼠标或键盘屏幕会亮一下，停手 0.6 秒重新变黑（不会闪）。");
         tips.SetToolTip(_segNormal, "静默：不拦输入。动鼠标屏幕会跟着亮，停手才黑。");
-        tips.SetToolTip(_segLock, "锁鼠标：吞掉鼠标/触摸板，动鼠标也不亮；键盘仍能点亮。要一直黑就用这个。");
+        tips.SetToolTip(_segLock, "全锁定：键盘和鼠标全部锁死，任何按键点击都收不到。只有 Alt+3 能解开。");
         tips.SetToolTip(_segRestore, "停止关屏、取消静音、点亮屏幕。");
         tips.SetToolTip(_segMute, "关屏时是否同时静音（记住选择）。");
     }
@@ -167,7 +167,7 @@ internal sealed class MainForm : Form
         _primary.TextColor = s.Running ? Color.FromArgb(36, 12, 8) : Color.FromArgb(10, 30, 26);
         _primary.Invalidate();
 
-        _meta.Text = "Alt+1 静默　Alt+2 锁鼠标　Alt+3 恢复　Alt+0 界面";
+        _meta.Text = "Alt+1 静默　Alt+2 全锁　Alt+3 恢复　Alt+0 界面";
         _meta.ForeColor = SubTextColor;
 
         _segMute.Text = _owner.MuteOnLock ? "静音 开" : "静音 关";
