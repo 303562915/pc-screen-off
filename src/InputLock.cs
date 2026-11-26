@@ -80,7 +80,7 @@ internal sealed class InputLock : IDisposable
     private static int _swallowedKey;
 
     /// <summary>识别到 Alt+3 时触发（在钩子线程上）。</summary>
-    public static event Action AltThreePressed;
+    public event Action AltThreePressed;
 
     public bool Active => _active;
     public int SwallowedMouse => _swallowedMouse;

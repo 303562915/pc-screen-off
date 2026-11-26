@@ -67,8 +67,8 @@ internal sealed class TrayContext : ApplicationContext
 
         _hotkeys = new HotkeyWindow(this);
 
-        // 钩子跑在别的线程，恢复到 UI 线程执行
-        _inputLock.AltThreePressed += () => BeginInvoke((Action)(() => RestoreAll("Alt+3（锁定中）")));
+        // 钩子跑在别的线程；ApplicationContext 本身不是控件，用托盘图标所在 UI 线程 marshal
+        _inputLock.AltThreePressed += () => _tray?.ContextMenuStrip?.BeginInvoke((Action)(() => RestoreAll("Alt+3（锁定中）")));
 
         _timer = new Timer { Interval = 100 };
         _timer.Tick += (_, _) => Tick();
