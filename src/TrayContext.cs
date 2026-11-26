@@ -186,6 +186,7 @@ internal sealed class TrayContext : ApplicationContext
         _mutedByUs = _muteOnLock && AudioMute.SetMute(true);
         _lastInput = Native.LastInputTick();
         _sent = 0;
+        _lockMouseGapMs = 1500;
         _lastOff = Environment.TickCount64;
         _lastMuteCheck = _lastOff;
 
@@ -232,18 +233,22 @@ internal sealed class TrayContext : ApplicationContext
                     Log($"补灭屏 第 {_sent} 次（空闲 {idleMs}ms）");
             }
         }
-        // ---- 锁鼠标模式：物理鼠标已被吞掉,应由程序自己维持黑色 ----
-        // 这里不能按「空闲」判断:没人动 = 没有 LastInputInfo 更新 = 会误判成"有输入",
-        // 屏幕一旦被别的程序点亮就再也不会被补灭。所以按固定间隔无条件补灭。
+        // ---- 锁鼠标模式：物理鼠标已被吞掉，应由程序自己维持黑色 ----
+        // 关键经验（2026-11-26 实测）：面板收到一次关屏后不会立刻「稳定黑」，
+        // 它要 ~1.5 秒才真正进入低功耗。这段时间里如果再发一次关屏，
+        // 面板会被重新上电一次 → 就是肉眼看到的「一直闪」。
+        // 所以这里必须给足静默期，而不是 0.8 秒一发。
         else
         {
-            if (now - _lastOff >= LockMouseMinGapMs)
+            if (now - _lastOff >= _lockMouseGapMs)
             {
                 Native.ScreenOff();
                 _lastOff = Environment.TickCount64;
                 _sent++;
-                if (_sent <= 5 || _sent % 20 == 0)
-                    Log($"锁鼠标补灭屏 第 {_sent} 次");
+                // 从第 2 次起逐步拉长间隔：1.5s → 3s → 6s → 10s 封顶。
+                // 面板要是被别的程序反复点亮，10 秒一次也足够把它压回去，且不会再闪。
+                _lockMouseGapMs = Math.Min(_lockMouseGapMs * 2, 10000);
+                Log($"锁鼠标补灭屏 第 {_sent} 次（下次间隔 {_lockMouseGapMs}ms）");
             }
         }
 
@@ -258,8 +263,8 @@ internal sealed class TrayContext : ApplicationContext
         }
     }
 
-    /// <summary>锁鼠标模式：每隔这么久无条件补发一次灭屏。</summary>
-    private const int LockMouseMinGapMs = 800;
+    /// <summary>锁鼠标模式当前的重试间隔（毫秒）。会被逐步拉长到 10 秒。</summary>
+    private long _lockMouseGapMs = 1500;
 
     /// <summary>停止操作多久之后才补灭屏（毫秒）。0.6 秒后补，几乎感觉不到延迟。</summary>
     private const int IdleBeforeOffMs = 600;
