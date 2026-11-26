@@ -170,7 +170,7 @@ internal sealed class InputLock : IDisposable
                     if (isDown && info.vkCode == VK_3 && _altDown)
                     {
                         _altDown = false;
-                        ((InputLock)hookOwner)?.FireAltThree();
+                        ((InputLock)_owner)?.FireAltThree();
                         return CallNextHookEx(_kbHook, nCode, wParam, lParam);   // 这一组放行
                     }
 
